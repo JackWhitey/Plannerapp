@@ -33,26 +33,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import { addWeeks, format } from 'date-fns';
 import WorkPlanner from './WorkPlanner';
-
-interface Job {
-  id: string;
-  customer: string;
-  address: string;
-  service: string;
-  price: number;
-  date: string;
-  time: string;
-  status: 'scheduled' | 'completed' | 'skipped';
-  notes: string;
-  round: string;
-  frequency: number;
-  lastCompleted: string | null;
-}
-
-interface DashboardProps {
-  jobs: Job[];
-  setJobs: React.Dispatch<React.SetStateAction<Job[]>>;
-}
+import { Job, DashboardProps } from '../types';
 
 const rounds = ['Worthing', 'Arundel', 'Haywards Heath'];
 
@@ -62,6 +43,10 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, setJobs }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [view, setView] = useState<'calendar' | 'planner'>('calendar');
 
+  const totalJobs = jobs.length;
+  const completedJobs = jobs.filter(job => job.status === 'completed').length;
+  const pendingJobs = jobs.filter(job => job.status === 'pending').length;
+
   const handleEditJob = (job: Job) => {
     setEditingJob(job);
     setIsEditDialogOpen(true);
@@ -69,8 +54,8 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, setJobs }) => {
 
   const handleSaveJob = () => {
     if (editingJob) {
-      setJobs(prevJobs => 
-        prevJobs.map(job => 
+      setJobs((prevJobs: Job[]) => 
+        prevJobs.map((job: Job) => 
           job.id === editingJob.id ? editingJob : job
         )
       );
@@ -80,23 +65,25 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, setJobs }) => {
   };
 
   const handleSkipJob = (jobId: string) => {
-    setJobs(prevJobs => 
-      prevJobs.map(job => 
+    setJobs((prevJobs: Job[]) => 
+      prevJobs.map((job: Job) => 
         job.id === jobId ? { ...job, status: 'skipped' } : job
       )
     );
   };
 
   const handleDeleteJob = (jobId: string) => {
-    setJobs(prevJobs => prevJobs.filter(job => job.id !== jobId));
+    setJobs((prevJobs: Job[]) => 
+      prevJobs.filter((job: Job) => job.id !== jobId)
+    );
   };
 
   const handleUpdateJob = (updatedJob: Job) => {
-    setJobs(prevJobs => {
-      return prevJobs.map(job => 
+    setJobs((prevJobs: Job[]) => 
+      prevJobs.map((job: Job) => 
         job.id === updatedJob.id ? updatedJob : job
-      );
-    });
+      )
+    );
   };
 
   const getJobsForDate = (date: Date) => {
@@ -297,6 +284,53 @@ const Dashboard: React.FC<DashboardProps> = ({ jobs, setJobs }) => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+        <Paper sx={{ p: 2, flex: 1 }}>
+          <Typography variant="h6">Total Jobs</Typography>
+          <Typography variant="h4">{totalJobs}</Typography>
+        </Paper>
+        
+        <Paper sx={{ p: 2, flex: 1 }}>
+          <Typography variant="h6">Completed Jobs</Typography>
+          <Typography variant="h4">{completedJobs}</Typography>
+        </Paper>
+        
+        <Paper sx={{ p: 2, flex: 1 }}>
+          <Typography variant="h6">Pending Jobs</Typography>
+          <Typography variant="h4">{pendingJobs}</Typography>
+        </Paper>
+      </Box>
+
+      <Paper sx={{ p: 2, mt: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          Recent Jobs
+        </Typography>
+        {jobs.length === 0 ? (
+          <Typography>No jobs available</Typography>
+        ) : (
+          <Box component="ul" sx={{ listStyle: 'none', p: 0 }}>
+            {jobs.slice(0, 5).map(job => (
+              <Box 
+                component="li" 
+                key={job.id}
+                sx={{ 
+                  p: 2, 
+                  mb: 1, 
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1
+                }}
+              >
+                <Typography variant="subtitle1">{job.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Status: {job.status}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Paper>
     </Container>
   );
 };

@@ -7,6 +7,8 @@ import {
   IconButton,
   Tooltip,
   Chip,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { format, addDays, isSameDay, parseISO } from 'date-fns';
 import EditIcon from '@mui/icons-material/Edit';
@@ -14,21 +16,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SkipNextIcon from '@mui/icons-material/SkipNext';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-
-interface Job {
-  id: string;
-  customer: string;
-  address: string;
-  service: string;
-  price: number;
-  date: string;
-  time: string;
-  status: 'scheduled' | 'completed' | 'skipped';
-  notes: string;
-  round: string;
-  frequency: number;
-  lastCompleted: string | null;
-}
+import { Job } from '../types';
+import { useNotification } from '../components/NotificationProvider';
 
 interface WorkPlannerProps {
   jobs: Job[];
@@ -36,6 +25,8 @@ interface WorkPlannerProps {
   onCompleteJob: (jobId: string) => void;
   onDeleteJob: (jobId: string) => void;
   onUpdateJob: (job: Job) => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 const WorkPlanner: React.FC<WorkPlannerProps> = ({
@@ -44,9 +35,12 @@ const WorkPlanner: React.FC<WorkPlannerProps> = ({
   onCompleteJob,
   onDeleteJob,
   onUpdateJob,
+  isLoading = false,
+  error = null,
 }) => {
   const [startDate, setStartDate] = useState(new Date());
   const [draggedJob, setDraggedJob] = useState<Job | null>(null);
+  const { showNotification } = useNotification();
 
   const days = Array.from({ length: 7 }, (_, i) => addDays(startDate, i));
 
@@ -82,20 +76,42 @@ const WorkPlanner: React.FC<WorkPlannerProps> = ({
       date: format(targetDate, 'yyyy-MM-dd'),
     };
 
-    onUpdateJob(updatedJob);
+    try {
+      onUpdateJob(updatedJob);
+      showNotification('Job rescheduled successfully', 'success');
+    } catch (err) {
+      showNotification('Failed to reschedule job', 'error');
+    }
+    
     setDraggedJob(null);
   };
 
+  if (isLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
   return (
-    <Box sx={{ width: '100%' }}>
+    <Box sx={{ p: 3 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <IconButton onClick={handlePreviousWeek}>
+        <IconButton onClick={handlePreviousWeek} disabled={isLoading}>
           <ChevronLeftIcon />
         </IconButton>
         <Typography variant="h6">
           {format(startDate, 'MMM d')} - {format(addDays(startDate, 6), 'MMM d, yyyy')}
         </Typography>
-        <IconButton onClick={handleNextWeek}>
+        <IconButton onClick={handleNextWeek} disabled={isLoading}>
           <ChevronRightIcon />
         </IconButton>
       </Box>
@@ -110,6 +126,8 @@ const WorkPlanner: React.FC<WorkPlannerProps> = ({
                 height: '100%',
                 minHeight: '200px',
                 bgcolor: isSameDay(day, new Date()) ? 'action.hover' : 'background.paper',
+                opacity: isLoading ? 0.7 : 1,
+                transition: 'opacity 0.2s',
               }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, day)}
@@ -143,6 +161,7 @@ const WorkPlanner: React.FC<WorkPlannerProps> = ({
                       '&:hover': {
                         bgcolor: 'action.hover',
                       },
+                      transition: 'background-color 0.2s',
                     }}
                   >
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -184,35 +203,60 @@ const WorkPlanner: React.FC<WorkPlannerProps> = ({
                         </Box>
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 0.5 }}>
                           <Tooltip title="Edit job details">
-                            <IconButton size="small" onClick={() => onEditJob(job)} sx={{ p: 0.5 }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => onEditJob(job)} 
+                              sx={{ p: 0.5 }}
+                              disabled={isLoading}
+                            >
                               <EditIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Complete job and schedule next occurrence">
-                            <IconButton size="small" onClick={() => onCompleteJob(job.id)} sx={{ p: 0.5 }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => onCompleteJob(job.id)} 
+                              sx={{ p: 0.5 }}
+                              disabled={isLoading}
+                            >
                               <SkipNextIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title="Delete job">
-                            <IconButton size="small" onClick={() => onDeleteJob(job.id)} sx={{ p: 0.5 }}>
+                            <IconButton 
+                              size="small" 
+                              onClick={() => onDeleteJob(job.id)} 
+                              sx={{ p: 0.5 }}
+                              disabled={isLoading}
+                            >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                         </Box>
                       </Box>
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        <Chip
-                          label={job.round}
-                          color="secondary"
-                          size="small"
-                          sx={{ height: 20, fontSize: '0.7rem' }}
-                        />
+                        {job.round && (
+                          <Chip
+                            label={job.round}
+                            color="secondary"
+                            size="small"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
                         <Chip
                           label={`£${job.price}`}
                           color="primary"
                           size="small"
                           sx={{ height: 20, fontSize: '0.7rem' }}
                         />
+                        {job.status !== 'pending' && (
+                          <Chip
+                            label={job.status}
+                            color={job.status === 'completed' ? 'success' : 'error'}
+                            size="small"
+                            sx={{ height: 20, fontSize: '0.7rem' }}
+                          />
+                        )}
                       </Box>
                     </Box>
                   </Paper>
