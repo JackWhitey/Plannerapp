@@ -3,6 +3,7 @@ import { Box, Typography, Button } from '@mui/material';
 
 interface Props {
   children: ReactNode;
+  name?: string; // Optional name to identify which component caused the error
 }
 
 interface State {
@@ -23,7 +24,8 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    // Log the error to an error reporting service
+    console.error(`Error in component ${this.props.name || 'unknown'}:`, error, errorInfo);
     this.setState({
       error,
       errorInfo,
@@ -53,7 +55,7 @@ class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <Typography variant="h4" gutterBottom>
-            Something went wrong
+            Something went wrong{this.props.name ? ` in ${this.props.name}` : ''}
           </Typography>
           <Typography variant="body1" color="text.secondary" paragraph>
             {this.state.error?.message || 'An unexpected error occurred'}

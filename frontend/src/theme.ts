@@ -1,19 +1,6 @@
 import { createTheme } from '@mui/material/styles';
 
-declare module '@mui/material/styles' {
-  interface Theme {
-    status: {
-      danger: string;
-    };
-  }
-  interface ThemeOptions {
-    status?: {
-      danger?: string;
-    };
-  }
-}
-
-export const theme = createTheme({
+const theme = createTheme({
   palette: {
     primary: {
       main: '#4C9AFF', // Fresh blue color
@@ -207,4 +194,6 @@ export const theme = createTheme({
       },
     },
   },
-}); 
+});
+
+export default theme; 
